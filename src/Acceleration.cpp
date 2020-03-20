@@ -37,6 +37,7 @@ volatile uint8_t FLAG_dy_is_negative = 0;
 /*************** Extern Variables ***************/
 extern uint16_t impStart;
 extern uint16_t impValue;
+extern uint16_t impFinish;
 extern uint16_t impControlableValue;
 extern uint16_t jerk_z;
 extern uint16_t velocity_z;
@@ -51,6 +52,8 @@ extern uint8_t FLAG_G0_or_G1;
 // 2 if dz negative
 uint8_t FLAG_dz_state = 0;
 /************************************************/
+static uint16_t future_impStart = IMP_START;
+static uint16_t deccelDistance = 0;
 
 /*************** Extern Function ***************/
 // Function to send data
@@ -151,11 +154,13 @@ void fAccelCompute(int32_t *dX, int32_t *dY, int32_t *dZ) {
   FLAG_dy_is_negative = 0;
   FLAG_dz_state = 0;
 
-  if (FLAG_G0_or_G1) {
+ /* if (FLAG_G0_or_G1) {
     impValue = impControlableValue;
   } else {
     impValue = IMP_VALUE_G0;
-  }
+  }*/
+
+  impValue = impControlableValue;
 
   if (*dY < 0) {
     *dY = -(*dY);
@@ -167,6 +172,16 @@ void fAccelCompute(int32_t *dX, int32_t *dY, int32_t *dZ) {
     FLAG_dx_is_negative = 1;
   }
 
+  impStart = future_impStart;
+
+  int32_t imp = static_cast<int32_t>(impFinish) *
+                    ((static_cast<int32_t>(impValue) - IMP_START) / 180.0f) +
+                IMP_START;
+  impFinish = static_cast<uint16_t>(imp);
+
+ /* sendData(&impFinish);
+  jumpLine();*/
+
   if ((*dX) >= (*dY) && (*dX) != 0) {
 
 #ifdef _ACCELERATION_REDUCTOR
@@ -175,17 +190,69 @@ void fAccelCompute(int32_t *dX, int32_t *dY, int32_t *dZ) {
     accelDistance_1 =
         ((impStart - impValue) / acceleration) * ACCELERATION_FACTOR;
 #else
-    accelDistance_1 = abs((impStart - impValue) * ACCELERATION_FACTOR);
+    if (impStart >= impValue) {
+      accelDistance_1 = (impStart - impValue) * ACCELERATION_FACTOR;
+    } else {
+      accelDistance_1 = 0;
+    }
+    if (impFinish >= impValue) {
+      deccelDistance = (impFinish - impValue) * ACCELERATION_FACTOR;
+      accelDistance_2 = abs(*dX - deccelDistance);
+    } else {
+      deccelDistance = 0;
+      accelDistance_2 = *dX;
+    }
+
+//  sendData(&accelDistance_2);
+//  jumpLine();
 #endif
 // End if acceleration is not equal 1
 #else
     accelDistance_1 = ((impStart - impValue) / acceleration);
 #endif
 
-    if ((*dX) < (accelDistance_1 * 2)) {
-      accelDistance_1 = (*dX) / 2;
+    // Checking if we have enough distance to accelerate then decelerate
+    if ((*dX) < (accelDistance_1 + deccelDistance)) {
+      // Checking if it's an acceleration or deceleration
+      if (impFinish < impStart) {
+        // It's an acceleration
+        accelDistance_1 = impStart - impFinish;
+        // There is no deceleration
+        accelDistance_2 = *dX;
+        // Checking if we can accelerate till the impFinish
+        if ((*dX) < accelDistance_1) {
+          // No we can't so we need to calculate what speed we will be at
+          accelDistance_1 = *dX;
+          future_impStart = impStart - *dX;
+        } else {
+          // Yes we can
+          future_impStart = impFinish;
+          impValue = impFinish; // Here dodgy
+        }
+      } else {
+        // It's a decceleration
+        deccelDistance = impFinish - impStart;
+        // There is no acceleration
+        accelDistance_1 = 0;
+        // Checking if we can decelerate till the impFinish
+        if ((*dX) < deccelDistance) {          
+          // No we can't so we need to calculate what speed we will be at
+          accelDistance_2 = 0;
+          future_impStart = impStart + *dX;
+        } else {         
+          // Yes we can
+          accelDistance_2 = *dX - deccelDistance;
+          impValue = impFinish; // Here dodgy
+          future_impStart = impFinish;
+        }
+      }
+      /* accelDistance_1 = (*dX) / 2;
+       accelDistance_2 = abs(*dX - accelDistance_1);
+       future_impStart = impStart;*/
+    } else {
+      future_impStart = impFinish;
     }
-    accelDistance_2 = abs(*dX - accelDistance_1);
+/*  accelDistance_2 = abs(*dX - accelDistance_1);*/
 
 #ifdef _DEBUG
     sendData("dx >= dy");
@@ -205,16 +272,66 @@ void fAccelCompute(int32_t *dX, int32_t *dY, int32_t *dZ) {
     accelDistance_1 =
         ((impStart - impValue) / acceleration) * ACCELERATION_FACTOR;
 #else
-    accelDistance_1 = abs((impStart - impValue) * ACCELERATION_FACTOR);
+    /*accelDistance_1 =
+        abs(static_cast<int16_t>(impStart - impValue) * ACCELERATION_FACTOR);
+    uint16_t deccelDistance = abs((impFinish - impValue) * ACCELERATION_FACTOR);
+    accelDistance_2 = abs(*dY - deccelDistance);*/
+
+        if (impStart >= impValue) {
+      accelDistance_1 = (impStart - impValue) * ACCELERATION_FACTOR;
+    } else {
+      accelDistance_1 = 0;
+    }
+    if (impFinish >= impValue) {
+      deccelDistance = (impFinish - impValue) * ACCELERATION_FACTOR;
+      accelDistance_2 = abs(*dY - deccelDistance);
+    } else {
+      deccelDistance = 0;
+      accelDistance_2 = *dY;
+    }
 #endif
 #else
     accelDistance_1 = ((impStart - impValue) / acceleration);
 #endif
 
-    if ((*dY) < (accelDistance_1 * 2)) {
-      accelDistance_1 = (*dY) / 2;
+    /*   if ((*dY) < (accelDistance_1 + deccelDistance)) {
+         accelDistance_1 = (*dY) / 2;
+         accelDistance_2 = abs(*dY - accelDistance_1);
+         future_impStart = impStart;
+       }else{
+         future_impStart = impFinish ;
+       }
+     //  accelDistance_2 = abs(*dY - accelDistance_1);*/
+
+    if ((*dY) < (accelDistance_1 + deccelDistance)) {
+      if (impFinish <= impStart) {
+        accelDistance_1 = impStart - impFinish;
+        accelDistance_2 = *dY;
+        if ((*dY) < accelDistance_1) {
+          accelDistance_1 = *dY;
+          future_impStart = impStart - *dY;
+        } else {
+          future_impStart = impFinish;
+          impValue = impFinish; // Here dodgy
+        }
+      } else {
+        deccelDistance = impFinish - impStart;
+        accelDistance_1 = 0;
+        if ((*dY) < deccelDistance) {
+          accelDistance_2 = 0;
+          future_impStart = impStart + *dY;
+        } else {
+          accelDistance_2 = *dY - deccelDistance;
+          impValue = impFinish; // here dodgy
+          future_impStart = impFinish;
+        }
+      }
+      /* accelDistance_1 = (*dY) / 2;
+       accelDistance_2 = abs(*dY - accelDistance_1);
+       future_impStart = impStart;*/
+    } else {
+      future_impStart = impFinish;
     }
-    accelDistance_2 = abs(*dY - accelDistance_1);
 
 #ifdef _DEBUG
     sendData("dy > dx");
@@ -224,6 +341,13 @@ void fAccelCompute(int32_t *dX, int32_t *dY, int32_t *dZ) {
     jumpLine();
 #endif
   }
+
+ /* sendData(&accelDistance_1);
+  jumpLine();
+  sendData(&accelDistance_2);
+  jumpLine();
+  sendData(&future_impStart);
+  jumpLine();*/
 
   if ((*dZ) != 0) {
 
@@ -263,7 +387,6 @@ void fAccelCompute(int32_t *dX, int32_t *dY, int32_t *dZ) {
     sendData(&acceleration_dz);
     jumpLine();
 #endif
-
   }
 }
 /************************************************/

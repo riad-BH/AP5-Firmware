@@ -130,6 +130,7 @@ extern uint8_t acceleration_dz;
 // Impulsion size at the start in microseconds
 extern uint16_t impStart;
 extern uint16_t impValue;
+extern uint16_t impFinish;
 /************************************************/
 extern int32_t dx;
 extern int32_t dy;
@@ -150,19 +151,19 @@ extern uint8_t FLAG_dz_state;
 extern void setTimer1(uint16_t);
 extern void setTimer3(uint16_t);
 /************************************************/
-// Function to send data
-// Function to send data USART_0
-void sendData(String);
-void sendData(float *);
-void sendData(uint8_t *);
-void sendData(int8_t *);
-void sendData(uint16_t *);
-void sendData(int16_t *);
-void sendData(uint32_t *);
-void sendData(int32_t *);
-void sendData(int8_t);
-void sendData(int16_t);
-void sendData(int32_t);
+// // Function to send data
+// // Function to send data USART_0
+// void sendData(String);
+// void sendData(float *);
+// void sendData(uint8_t *);
+// void sendData(int8_t *);
+// void sendData(uint16_t *);
+// void sendData(int16_t *);
+// void sendData(uint32_t *);
+// void sendData(int32_t *);
+// void sendData(int8_t);
+// void sendData(int16_t);
+// void sendData(int32_t);
 /************************************************/
 #define fSetUpXYE()                                                            \
   frontEdge = 1;                                                               \
@@ -175,17 +176,17 @@ void sendData(int32_t);
   _FLAG_dx_is_negative = FLAG_dx_is_negative;                                  \
   _FLAG_dy_is_negative = FLAG_dy_is_negative;                                  \
   FLAG_motorsActivated = 1;                                                    \
-  _impValue = (uint16_t)(impValue * 16);                             \
+  _impValue = (uint16_t)(impValue * 16);                                       \
   _FLAG_extruder = FLAG_extruder;                                              \
   FLAG_machine = 0;                                                            \
   dx = 0;                                                                      \
-  dy = 0
+  dy = 0;                                                                      \
+  impSize = impStart * 16;
 /******************************************************************************/
-
+//    PORTA |= _BV(PIN_E_STEP);\PORTA &=~ _BV(PIN_E_STEP);
 /******************************************************************************/
 #define fAcceleration()                                                        \
   if (step < _accelDistance_1) {                                               \
-                                                                               \
     impSize = impSize - _acceleration;                                         \
                                                                                \
     OCR1A = impSize;                                                           \
@@ -194,9 +195,8 @@ void sendData(int32_t);
   else if (step < _accelDistance_2 && _accelDistance_1 < step) {               \
     impSize = _impValue;                                                       \
     OCR1A = impSize;                                                           \
-  }                                                                            \
                                                                                \
-  else if (_accelDistance_2 < step) {                                          \
+  } else if (_accelDistance_2 <= step) {                                        \
     impSize = impSize + _acceleration;                                         \
     OCR1A = impSize;                                                           \
   }
@@ -249,6 +249,7 @@ void fSettingUp() {
     }
     // impSize = (uint16_t)((uint16_t)impSize * 16);
     fSetUpXYE();
+
     setTimer1(impStart);
   } /*else if (FLAG_extrusion_for_timer != 0) {
     if(FLAG_extrusion_for_timer == 1){
@@ -326,7 +327,10 @@ void fMoveXYE() {
       fStopExtruder();
       step = 0;
       over = 0;
+      //     impStart = round(impSize / 16);
+      // sendData(&impStart);
       // extruderStep = 0;
+      PORTA &= ~_BV(PIN_E_STEP);
       accelerationFactor = 0;
       FLAG_motorsActivated = 0;
       if (_FLAG_array1_or_array2 == 1) {
@@ -391,6 +395,8 @@ void fMoveXYE() {
       fStopExtruder();
       step = 0;
       over = 0;
+      //    impStart = round(impSize / 16);
+      //     sendData(&impStart);
       // extruderStep = 0;
       accelerationFactor = 0;
       FLAG_motorsActivated = 0;
@@ -414,9 +420,9 @@ void fSettingUpZ() {
   _accelDistance_2_dz = accelDistance_2_dz;
   _acceleration_dz = uint16_t(acceleration_dz * 16);
   if (FLAG_dz_state == 1) {
-    PORTL &= ~(_BV(PIN_Z1_DIR)|_BV(PIN_Z2_DIR));
+    PORTL &= ~(_BV(PIN_Z1_DIR) | _BV(PIN_Z2_DIR));
   } else {
-    PORTL |= (_BV(PIN_Z1_DIR)|_BV(PIN_Z2_DIR));
+    PORTL |= (_BV(PIN_Z1_DIR) | _BV(PIN_Z2_DIR));
   }
   setTimer3(JERK_Z);
   dz = 0;
@@ -429,13 +435,13 @@ void fSettingUpZ() {
 */
 void fMoveZ() {
 
-   PORTL ^= (_BV(PIN_Z1_STEP)|_BV(PIN_Z2_STEP));
-   
+  PORTL ^= (_BV(PIN_Z1_STEP) | _BV(PIN_Z2_STEP));
+
   if (frontEdge_dz) {
     frontEdge_dz = !frontEdge_dz;
     zStep++;
     if (zStep == _dz) {
-      PORTL &= ~(_BV(PIN_Z1_STEP)|_BV(PIN_Z2_STEP));
+      PORTL &= ~(_BV(PIN_Z1_STEP) | _BV(PIN_Z2_STEP));
       TIMSK3 = 0;
       TCNT3 = 0;
       TCCR3B = 0;

@@ -15,10 +15,10 @@
 // #define _ACCELERATION_REDUCTOR_Z
 // #define  _USE_fMoveExtruder
 /*********************************************/
-#define IMP_START 225
+#define IMP_START 280
 // 160 us = 40 mm/s
-#define IMP_VALUE 53
-#define IMP_VALUE_G0 32
+#define IMP_VALUE 107
+#define IMP_VALUE_G0 107
 // 2.5mm/s = 512
 #define JERK_Z 512    
 #define VELOCITY_Z 70 
@@ -26,7 +26,7 @@
 /*********************************************/
 #define EXTRUDER_SPEED 15
 /*********************************************/
-#define ACCELERATION 2
+#define ACCELERATION 1
 #define ACCELERATION_Z 2
 /*********************************************/
 #define ACCELERATION_FACTOR 1

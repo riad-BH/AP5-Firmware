@@ -6,6 +6,7 @@
 #include "Extruder.h"
 #include "Pins.h"
 #include "Setting.h"
+#include "Sending.h"
 
 /*
   * SETTING FUNCTION : SETS UP SOME SETTING FOR THE MOVE FUNCTION

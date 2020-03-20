@@ -5,6 +5,8 @@
 uint16_t impStart = IMP_START;
 // Impulsion size in microseconds
 uint16_t impValue = IMP_VALUE;
+// Implusion size at the end in microseconds
+uint16_t impFinish = 180;
 // Controlable impulsion size in microseconds
 uint16_t impControlableValue = IMP_VALUE;
 // Impulsion size at the start in microseconds for Z axis
@@ -182,6 +184,20 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
           break;
         }
 
+        // Printer speed
+        case 'F': {
+          char *indexF = &dataLine[indexChar];
+          impControlableValue = atoi(indexF + 1);
+          break;
+        }
+
+        // Impulsion finish
+        case 'J': {
+          char *indexJ = strchr(dataLine, 'J');
+          impFinish = atoi(indexJ + 1);
+          break;
+        }
+
         default:
           break;
         }
@@ -268,9 +284,17 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
 #endif
           break;
         }
+
         case 'F': {
           char *indexF = &dataLine[indexChar];
           impControlableValue = atoi(indexF + 1);
+          break;
+        }
+
+        // Impulsion finish
+        case 'J': {
+          char *indexJ = strchr(dataLine, 'J');
+          impFinish = atoi(indexJ + 1);
           break;
         }
 
@@ -286,7 +310,6 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
           FLAG_extrusion_for_timer = 2;
           break;
         }*/
-
 
         default:
           break;
@@ -375,6 +398,9 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
         *dY = 0;
         *dZ = mcs * spmZ;
       }
+      impFinish = 180;
+      FLAG_G0_or_G1 = 0;
+      impValue = IMP_VALUE_G0;
       return 0;
       break;
     }
@@ -395,6 +421,9 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
         *dY = 0;
         *dZ = -(int16_t)(mcs * spmZ);
       }
+      impFinish = 180;
+      FLAG_G0_or_G1 = 0;
+      impValue = IMP_VALUE_G0;
       return 0;
       break;
     }
