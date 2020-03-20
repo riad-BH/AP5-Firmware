@@ -172,6 +172,32 @@ void sendData(int16_t *localInt)
 }
 /********************************************************************/
 
+void sendData(volatile uint16_t *localInt)
+{
+  if (!FLAG_bufferReady)
+  {
+    FLAG_bufferReady = 1;
+    UCSR0B |= _BV(TXCIE0);
+    TX_inputString += *localInt;
+    if (FLAG_bufferReady && TX_inputString[TX_stringPointer] != 0)
+    {
+      UDR0 = TX_inputString[TX_stringPointer++];
+    }
+    else
+    {
+      UCSR0B &= ~_BV(TXCIE0);
+      FLAG_bufferReady = 0;
+      TX_stringPointer = 0;
+      TX_inputString = "";
+    }
+  }
+  else
+  {
+    TX_inputString += *localInt;
+  }
+}
+/********************************************************************/
+
 void sendData(uint32_t *localInt)
 {
   if (!FLAG_bufferReady)
