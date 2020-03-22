@@ -1,7 +1,8 @@
 #ifndef H_SENDING
 #define H_SENDING
-#include <Arduino.h>
 #include "Setting.h"
+#include <Arduino.h>
+
 
 // Function to send data USART_0
 void sendData(String);
@@ -38,9 +39,9 @@ void transferData1();
 
 // Jump line function
 #ifdef _PROTEUS
-#define jumpLine() sendData("\r")
+void inline jumpLine() { sendData("\r"); }
 #else
-#define jumpLine() sendData("\n")
+void inline jumpLine() { sendData("\n"); }
 #endif
 
-#endif //H_SENDING
+#endif // H_SENDING
