@@ -151,19 +151,7 @@ extern uint8_t FLAG_dz_state;
 extern void setTimer1(uint16_t);
 extern void setTimer3(uint16_t);
 /************************************************/
-// // Function to send data
-// // Function to send data USART_0
-// void sendData(String);
-// void sendData(float *);
-// void sendData(uint8_t *);
-// void sendData(int8_t *);
-// void sendData(uint16_t *);
-// void sendData(int16_t *);
-// void sendData(uint32_t *);
-// void sendData(int32_t *);
-// void sendData(int8_t);
-// void sendData(int16_t);
-// void sendData(int32_t);
+
 /************************************************/
 #define fSetUpXYE()                                                            \
   frontEdge = 1;                                                               \
@@ -473,7 +461,7 @@ void fSettingUpE() {
   setTimer3(VELOCITY_E);
 }
 /************************************************/
-void fMoveE() {
+ void fMoveE() {
   PORTA ^= (_BV(PIN_E_STEP));
   extruderStep++;
   if (extruderStep == _de) {
