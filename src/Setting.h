@@ -48,8 +48,11 @@
 /*********************************************/
 #define BLUETOOTH_BAUD_RATE 9600
 /*********************************************/
-#define TEMPERATURE 200
+#define TEMPERATURE 360
 /*********************************************/
 #define EXTRUDER_GEAR_COEFFICIENT 291
+/*********************************************/
+// For the timer2
+#define CYCLES_TO_ONE_SECOND 61
 /*********************************************/
 #endif
