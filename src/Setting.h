@@ -22,7 +22,7 @@
 // 2.5mm/s = 512
 #define JERK_Z 512    
 #define VELOCITY_Z 70 
-#define VELOCITY_E 300
+#define VELOCITY_E 125
 /*********************************************/
 #define EXTRUDER_SPEED 15
 /*********************************************/
@@ -54,5 +54,8 @@
 /*********************************************/
 // For the timer2
 #define CYCLES_TO_ONE_SECOND 61
+/*********************************************/
+// Steps for Z axis in the bed leveling
+#define STEPS_Z_AXIS_BED_LEVLING 40
 /*********************************************/
 #endif

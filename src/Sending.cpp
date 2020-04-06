@@ -2,7 +2,7 @@
 
 /*************** Local Variables ****************/
 // Pointer for the transmition string
-static uint8_t TX_stringPointer = 0;
+static uint16_t TX_stringPointer = 0;
 // Flag that states if there is an available data for transmition
 static uint8_t FLAG_bufferReady = 0;
 // String to store the data for transmition
