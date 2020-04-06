@@ -150,6 +150,9 @@ void setIO(){
   // Hotend Pin
   H_OUTPUT(PIN_HOTEND);
 
+  // Auto leveling sensor Pin
+  C_INPUT_PULLUP(PIN_AUTOLEVELING_SENSOR);
+
   // Y axis Limit switch
   D_INPUT_PULLUP(PIN_LIMITSWITCH_Y_FOWARD);
   D_INPUT_PULLUP(PIN_LIMITSWITCH_Y_BACKWARD);

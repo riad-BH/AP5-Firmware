@@ -40,8 +40,6 @@ volatile static uint16_t _accelDistance_2_dz;
 volatile static uint16_t extruderStep = 0;
 // Z axis motor's steps
 volatile static uint16_t zStep = 0;
-// Flag is set to 1 if Z motor is activated
-volatile static uint8_t FLAG_motor_Z_acivated = 0;
 /************************************************/
 // For ISR a front edge
 volatile static uint8_t frontEdge = 1;
@@ -92,6 +90,8 @@ extern uint8_t FLAG_extruder;
 extern volatile uint8_t FLAG_array1_or_array2;
 // Flag is set to 1 when motors are moving
 extern volatile uint8_t FLAG_motorsActivated;
+// Flag is set to 1 if Z motor is activated
+extern volatile uint8_t FLAG_motor_Z_acivated;
 /************************************************/
 // Flag Machine : 0 = Receiving / 1 = Processing / 2 = Execution
 extern uint8_t FLAG_machine;
@@ -146,10 +146,8 @@ extern uint8_t FLAG_extrusion_for_timer;
 // 2 if dz negative
 extern uint8_t FLAG_dz_state;
 /************************************************/
-
-/*************** Extern Function ***************/
-extern void setTimer1(uint16_t);
-extern void setTimer3(uint16_t);
+// Flag is set to one if automatic bed leveling is activated
+extern uint8_t FLAG_automaticBedLeveling;
 /************************************************/
 
 /************************************************/
@@ -184,7 +182,7 @@ extern void setTimer3(uint16_t);
     impSize = _impValue;                                                       \
     OCR1A = impSize;                                                           \
                                                                                \
-  } else if (_accelDistance_2 <= step) {                                        \
+  } else if (_accelDistance_2 <= step) {                                       \
     impSize = impSize + _acceleration;                                         \
     OCR1A = impSize;                                                           \
   }
@@ -428,6 +426,21 @@ void fMoveZ() {
   if (frontEdge_dz) {
     frontEdge_dz = !frontEdge_dz;
     zStep++;
+    if (FLAG_automaticBedLeveling && !(PINC && _BV(PIN_AUTOLEVELING_SENSOR))) {
+      PORTL &= ~(_BV(PIN_Z1_STEP) | _BV(PIN_Z2_STEP));
+      TIMSK3 = 0;
+      TCNT3 = 0;
+      TCCR3B = 0;
+      zStep = 0;
+      FLAG_motor_Z_acivated = 0;
+      frontEdge_dz = 1;
+      FLAG_automaticBedLeveling = 0;
+      impSize_Z = JERK_Z * 16;
+#ifdef _ACCELERATION_REDUCTOR_Z
+      accelerationFactor = 0;
+#endif
+      return;
+    }
     if (zStep == _dz) {
       PORTL &= ~(_BV(PIN_Z1_STEP) | _BV(PIN_Z2_STEP));
       TIMSK3 = 0;
@@ -461,7 +474,7 @@ void fSettingUpE() {
   setTimer3(VELOCITY_E);
 }
 /************************************************/
- void fMoveE() {
+void fMoveE() {
   PORTA ^= (_BV(PIN_E_STEP));
   extruderStep++;
   if (extruderStep == _de) {
@@ -472,6 +485,7 @@ void fSettingUpE() {
     TCCR3B = 0;
     extruderStep = 0;
     FLAG_extrusion_for_timer = 0;
+    FLAG_motorsActivated = 0;
   }
 }
 /************************************************/

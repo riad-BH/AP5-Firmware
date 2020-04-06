@@ -7,6 +7,12 @@ volatile uint8_t FLAG_array1_or_array2 = 1;
 // Flag is set to 1 when motors are moving
 volatile uint8_t FLAG_motorsActivated = 0;
 
+// Flag is set to one if automatic bed leveling is activated
+volatile uint8_t FLAG_automaticBedLeveling = 0;
+
+// Flag is set to 1 if Z motor is activated
+volatile uint8_t FLAG_motor_Z_acivated = 0;
+
 // Flag is set to :
 //# 0 == RX_array1 empty
 //# 1 == RX_array1 full

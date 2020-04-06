@@ -7,7 +7,7 @@
 #include "Pins.h"
 #include "Setting.h"
 #include "Sending.h"
-
+#include "TimerSetting.h"
 /*
   * SETTING FUNCTION : SETS UP SOME SETTING FOR THE MOVE FUNCTION
 */

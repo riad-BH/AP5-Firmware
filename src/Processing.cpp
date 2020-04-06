@@ -75,38 +75,17 @@ extern uint16_t spmY;
 extern uint16_t spmZ;
 /************************************************/
 
-/*************** Extern Functions ***************/
-// Function to send data
-extern void sendData(String);
-extern void sendData(float *);
-extern void sendData(uint8_t *);
-extern void sendData(int8_t *);
-extern void sendData(uint16_t *);
-extern void sendData(int16_t *);
-extern void sendData(uint32_t *);
-extern void sendData(int32_t *);
 /************************************************/
-// Function for starting the USART
-extern void setUSART0(const uint32_t);
-extern void setUSART1(const uint16_t);
-extern void unsetUSART1();
-/************************************************/
-//  Setting INT0/1/2/3/4/5 for falling edge
-extern void setInt(uint8_t);
-//  Desactivating interrupt
-extern void unsetInt(uint8_t);
-/************************************************/
-// Function for Setting up the extruder for mouvement
-extern void fSettingUpE();
+volatile extern uint8_t FLAG_motorsActivated;
+// Flag is set to 1 if Z motor is activated
+volatile extern uint8_t FLAG_motor_Z_acivated;
 /************************************************/
 
 /************************************************/
-// Jump line function
-#ifdef _PROTEUS
-#define jumpLine() sendData("\r")
-#else
-#define jumpLine() sendData("\n")
-#endif
+// Flag is set to one if automatic bed leveling is activated
+extern uint8_t FLAG_automaticBedLeveling;
+/************************************************/
+
 /************************************************/
 
 uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
@@ -347,6 +326,18 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
       break;
     }
 
+    // Temperature control
+    case 'T': {
+      char *indexT = strchr(dataLine, 'T');
+      uint16_t voltage = atoi(indexT + 1);
+      setTemperature(voltage);
+      sendData("Voltage temperature is set now to: ");
+      sendData(&voltage);
+      jumpLine();
+      return 1;
+      break;
+    }
+
     // Bluetooth
     case 'B': {
       FLAG_bluetoothState = !FLAG_bluetoothState;
@@ -469,14 +460,25 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
 #else
       de = atol(index_e + 1) * EXTRUDER_GEAR_COEFFICIENT;
 #endif
-      FLAG_extrusion_for_timer = 1;
       if (de >= 0) {
         PORTA &= ~(_BV(PIN_E_DIR));
       } else {
         PORTA |= (_BV(PIN_E_DIR));
         de = -(de);
       }
+      while (FLAG_motorsActivated || FLAG_motor_Z_acivated) {
+        if (readFlagADC()) {
+          regulateTemp();
+        }
+      }
+      FLAG_motorsActivated = 1;
+      FLAG_extrusion_for_timer = 1;
       fSettingUpE();
+#ifdef _PROTEUS
+      sendData(">\r");
+#else
+      sendData(">\n");
+#endif
       return 1;
       break;
     }
@@ -536,6 +538,16 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
       sendData(&spmZ);
       jumpLine();
       return 1;
+      break;
+    }
+
+    // Bed leveling
+    case 'b': {
+      *dX = 0;
+      *dY = 0;
+      *dZ = -40000;
+      FLAG_automaticBedLeveling = 1;
+      return 0;
       break;
     }
 

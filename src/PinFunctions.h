@@ -35,6 +35,9 @@
 #define C_INPUT_PULLUP(pinName)  \
   DDRC &= ~_BV(pinName); \
   PORTC |= _BV(pinName);
+
+#define C_INPUT(pinName)  \
+  DDRC &= ~_BV(pinName); 
 /*================================================================*/
 
 /*                            PORT D                              */
