@@ -1,6 +1,8 @@
 #ifndef H_PIN_MEGA
 #define H_PIN_MEGA
 
+#include "Arduino.h"
+
 /////////////////////// A //////////////////////
 #define DPIN_22 PA0
 #define DPIN_23 PA1

@@ -1,34 +1,59 @@
 #ifndef H_FLAGS
 #define H_FLAGS
 
-// Is array 1 or 2 begin processed and executed
-volatile uint8_t FLAG_array1_or_array2 = 1;
+#include "Arduino.h"
+#include "ConstDefines.h"
+#include "Setting.h"
 
-// Flag is set to 1 when motors are moving
-volatile uint8_t FLAG_motorsActivated = 0;
+class Flags
+{
 
-// Flag is set to one if automatic bed leveling is activated
-volatile uint8_t FLAG_automaticBedLeveling = 0;
+private:
+  // Flag is set to 1 when motors are moving
+  static volatile uint8_t flag_motor_activated;
+  // Flag is set to 1 if Z motor is activated
+  static volatile uint8_t flag_motor_z_activated;
+  // Flag is set to one if automatic bed leveling is activated
+  static volatile uint8_t flag_automatic_bed_leveling;
+  // Flag Machine : 0 = Receiving / 1 = Processing / 2 = Execution
+  static volatile uint8_t flag_machine;
 
-// Flag is set to 1 if Z motor is activated
-volatile uint8_t FLAG_motor_Z_acivated = 0;
+public:
+  inline static volatile const uint8_t &getFlag_motor_activated()
+  {
+    return flag_motor_activated;
+  }
+  inline static void setFlag_motor_activated(const uint8_t &_flag_motor_activated)
+  {
+    flag_motor_activated = _flag_motor_activated;
+  }
 
-// Flag is set to :
-//# 0 == RX_array1 empty
-//# 1 == RX_array1 full
-//# 2 == RX_array1 processed
-uint8_t FLAG_RX_array1_state = EMPTY;
-// Flag is set to :
-//# 0 == RX_array2 empty
-//# 1 == RX_array2 full
-//# 2 == RX_array2 processed
-uint8_t FLAG_RX_array2_state = EMPTY;
+  inline static const volatile uint8_t &getFlag_motor_z_activated()
+  {
+    return flag_motor_z_activated;
+  }
 
-// Flag Machine : 0 = Receiving / 1 = Processing / 2 = Execution
-uint8_t FLAG_machine = RECEIVING;
+  inline static void setFlag_motor_z_activated(const uint8_t &_flag_motor_z_activated)
+  {
+    flag_motor_z_activated = _flag_motor_z_activated;
+  }
 
-// Flag that indicates that a data has ben recieved and it's ready to be
-// processed
-volatile uint8_t FLAG_RX = 0;
+  inline static const uint8_t getFlag_automatic_bed_leveling()
+  {
+    return flag_automatic_bed_leveling;
+  }
+  inline static void
+  setFlag_automatic_bed_leveling(const uint8_t &_flag_automatic_bed_leveling)
+  {
+    flag_automatic_bed_leveling = _flag_automatic_bed_leveling;
+  }
+
+  inline const static uint8_t getFlag_machine() { return flag_machine; }
+
+  inline static void setFlag_machine(const uint8_t &_flag_machine)
+  {
+    flag_machine = _flag_machine;
+  }
+};
 
 #endif // H_FLAGS

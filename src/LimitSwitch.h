@@ -3,11 +3,18 @@
 
 #include <Arduino.h>
 #include "Setting.h"
+#include "MouvementQueue.h"
+#include "Motors.h"
 
-void fLSFowardX();
-void fLSBackwardX();
+class LimitSwitchs
+{
 
-void fLSFowardY();
-void fLSBackwardY();
+public:
+  static void fLSFowardX(MouvementQueue &mq);
+  static void fLSBackwardX(MouvementQueue &mq);
+
+  static void fLSFowardY(MouvementQueue &mq);
+  static void fLSBackwardY(MouvementQueue &mq);
+};
 
 #endif // H_LIMIT_SWITCH

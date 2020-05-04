@@ -1,8 +1,10 @@
 #include "Config.h"
 
+
 /********************************************************************/
-void sendStartingScreen(){
-  #ifdef _BLUETOOTH
+void sendStartingScreen()
+{
+#ifdef _BLUETOOTH
   setUSART1(BLUETOOTH_BAUD_RATE);
   FLAG_bluetoothState = 1;
 #endif
@@ -16,7 +18,6 @@ void sendStartingScreen(){
   FLAG_limitSwitchState = 1;
 #endif
 
-
 #ifdef _BLUETOOTH
   sendData1("AP5");
   jumpLine();
@@ -26,7 +27,7 @@ void sendStartingScreen(){
   sendData1("DEBUGING MODE");
   jumpLine();
 #endif
-#ifdef _PROTEUS
+#if _PROTEUS == 1
   sendData1("PROTEUS MODE");
   jumpLine();
 #endif
@@ -57,108 +58,147 @@ void sendStartingScreen(){
   sendData1(MANUAL_CONTROL_STEP);
   jumpLine();
 #endif
-  sendData("AP5");
+  sendLine("AP5");
   jumpLine();
-  sendData("Firmware: ");
-  sendData(__DATE__);
+  sendLine("Firmware: ");
+  sendLine(__DATE__);
   jumpLine();
 #ifdef _DEBUG
-  sendData("DEBUGING MODE");
+  sendLine("DEBUGING MODE");
   jumpLine();
 #endif
-#ifdef _PROTEUS
-  sendData("PROTEUS MODE");
+#if _PROTEUS == 1
+  sendLine("PROTEUS MODE");
   jumpLine();
 #endif
 #ifdef _LIMITSWITCH
-  sendData("Limit switch: Activated");
+  sendLine("Limit switch: Activated");
   jumpLine();
 #endif
 #ifdef _POSITIONS
-  sendData("POSITIONS MODE");
+  sendLine("POSITIONS MODE");
   jumpLine();
 #endif
-  sendData("Baud rate: ");
+  sendLine("Baud rate: ");
   sendData(USART_BAUD_RATE);
   jumpLine();
-  sendData("Speed: ");
+  sendLine("Speed: ");
   sendData(IMP_VALUE);
   jumpLine();
-  sendData("Acceleration: ");
+  sendLine("Acceleration: ");
   sendData(ACCELERATION);
   jumpLine();
-  sendData("Jerk: ");
+  sendLine("Jerk: ");
   sendData(IMP_START);
   jumpLine();
-  sendData("Extruder's Speed: ");
+  sendLine("Extruder's Speed: ");
   sendData(EXTRUDER_SPEED);
   jumpLine();
-  sendData("Manual Control Step: ");
+  sendLine("Manual Control Step: ");
   sendData(MANUAL_CONTROL_STEP);
   jumpLine();
 
-  sendData("$X");
+  sendLine("$X");
   sendData(STEP_PER_MILLIMETER_X);
-  sendData(" Y");
+  sendLine(" Y");
   sendData(STEP_PER_MILLIMETER_Y);
-  sendData(" Z");
+  sendLine(" Z");
   sendData(STEP_PER_MILLIMETER_Z);
-  sendData(" J");
+  sendLine(" J");
   sendData(IMP_START);
-  sendData(" A");
+  sendLine(" A");
   sendData(ACCELERATION);
-  sendData(" I");
+  sendLine(" I");
   sendData(IMP_VALUE);
-  sendData(" M");
+  sendLine(" M");
   sendData(MANUAL_CONTROL_STEP);
-  sendData(" E");
+  sendLine(" E");
   sendData(EXTRUDER_SPEED);
-  sendData(" B");
+  sendLine(" B");
 #ifdef _BLUETOOTH
   sendData(1);
 #else
   sendData(0);
 #endif
-  sendData(" L");
+  sendLine(" L");
 #ifdef _LIMITSWITCH
   sendData(1);
 #else
   sendData(0);
   jumpLine();
-  #endif
+#endif
 }
 
-void setIO(){
-    // X axis motors
-  B_OUTPUT(PIN_X_DIR);
-  B_OUTPUT(PIN_X_STEP);
+void setIO()
+{
+  // X axis motors
+  // B_OUTPUT(PIN_X_DIR);
+  // B_OUTPUT(PIN_X_STEP);
+    // // Y axis motors
+  // B_OUTPUT(PIN_Y_DIR);
+  // B_OUTPUT(PIN_Y_STEP);
 
-  // Y axis motors
-  B_OUTPUT(PIN_Y_DIR);
-  B_OUTPUT(PIN_Y_STEP);
+  // // E axis motors
+  // L_OUTPUT(PIN_E_DIR);
+  // L_OUTPUT(PIN_E_STEP);
 
-  // E axis motors
-  A_OUTPUT(PIN_E_DIR);
-  A_OUTPUT(PIN_E_STEP);
+  // // Z1 and Z2 axis motors
+  // L_OUTPUT(PIN_Z1_STEP);
+  // L_OUTPUT(PIN_Z2_STEP);
+  // L_OUTPUT(PIN_Z1_DIR);
+  // L_OUTPUT(PIN_Z2_DIR);
 
-  // Z1 and Z2 axis motors
-  L_OUTPUT(PIN_Z1_STEP);
-  L_OUTPUT(PIN_Z2_STEP);
-  L_OUTPUT(PIN_Z1_DIR);
-  L_OUTPUT(PIN_Z2_DIR);
+  // // Hotend Pin
+  // H_OUTPUT(PIN_HOTEND);
 
-  // Hotend Pin
-  H_OUTPUT(PIN_HOTEND);
+  // // Auto leveling sensor Pin
+  // C_INPUT_PULLUP(PIN_AUTOLEVELING_SENSOR);
 
-  // Auto leveling sensor Pin
-  C_INPUT_PULLUP(PIN_AUTOLEVELING_SENSOR);
+  // // Y axis Limit switch
+  // D_INPUT_PULLUP(PIN_LIMITSWITCH_Y_FOWARD);
+  // D_INPUT_PULLUP(PIN_LIMITSWITCH_Y_BACKWARD);
 
-  // Y axis Limit switch
-  D_INPUT_PULLUP(PIN_LIMITSWITCH_Y_FOWARD);
-  D_INPUT_PULLUP(PIN_LIMITSWITCH_Y_BACKWARD);
+  // // X axis Limit switch
+  // E_INPUT_PULLUP(PIN_LIMITSWITCH_X_FOWARD);
+  // E_INPUT_PULLUP(PIN_LIMITSWITCH_X_BACKWARD);
 
-  // X axis Limit switch
-  E_INPUT_PULLUP(PIN_LIMITSWITCH_X_FOWARD);
-  E_INPUT_PULLUP(PIN_LIMITSWITCH_X_BACKWARD);
+  IOPort<IOPIN_X_STEP>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_X_DIR>::IOConfiguration(MODE_OUTPUT);
+
+  IOPort<IOPIN_Y_STEP>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_Y_DIR>::IOConfiguration(MODE_OUTPUT);
+  
+  IOPort<IOPIN_Z1_STEP>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_Z1_DIR>::IOConfiguration(MODE_OUTPUT);
+  
+  IOPort<IOPIN_Z2_STEP>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_Z2_DIR>::IOConfiguration(MODE_OUTPUT);
+
+  IOPort<IOPIN_E_STEP>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_E_DIR>::IOConfiguration(MODE_OUTPUT);
+
+  IOPort<IOPIN_HOTEND>::IOConfiguration(MODE_OUTPUT);
+
+  IOPort<IOPIN_AUTOLEVELING_SENSOR>::IOConfiguration(MODE_INPUT);
+
+  IOPort<IOPIN_LIMITSWITCH_X_FOWARD>::IOConfiguration(MODE_INPUT_PULLUP);
+  IOPort<IOPIN_LIMITSWITCH_Y_FOWARD>::IOConfiguration(MODE_INPUT_PULLUP);
+  IOPort<IOPIN_LIMITSWITCH_X_BACKWARD>::IOConfiguration(MODE_INPUT_PULLUP);
+  IOPort<IOPIN_LIMITSWITCH_Y_BACKWARD>::IOConfiguration(MODE_INPUT_PULLUP);
+
+  IOPort<IOPIN_LCD_RS>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_LCD_E>::IOConfiguration(MODE_OUTPUT);
+
+  IOPort<IOPIN_LCD_D0>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_LCD_D1>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_LCD_D2>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_LCD_D3>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_LCD_D4>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_LCD_D5>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_LCD_D6>::IOConfiguration(MODE_OUTPUT);
+  IOPort<IOPIN_LCD_D7>::IOConfiguration(MODE_OUTPUT);
+
+
+
 }
 /********************************************************************/

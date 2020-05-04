@@ -7,11 +7,11 @@
 // #define _POSITIONS
 // #define _BLUETOOTH
 // #define _GET_EXTRUSION
-#define _ABSOLUTE_POSITIONS
-// #define _PROTEUS
+#define _ABSOLUTE_POSITIONS 1
+#define _PROTEUS 0
 // #define _ABSOLUTE_EXTRUSION
 // #define _STEP_PER_MILIMETER_CALCULATION
-#define _ACCELERATION_REDUCTOR
+#define _ACCELERATION_REDUCTOR 1
 // #define _ACCELERATION_REDUCTOR_Z
 // #define  _USE_fMoveExtruder
 /*********************************************/
@@ -20,8 +20,8 @@
 #define IMP_VALUE 107
 #define IMP_VALUE_G0 107
 // 2.5mm/s = 512
-#define JERK_Z 512    
-#define VELOCITY_Z 70 
+#define JERK_Z 512
+#define VELOCITY_Z 70
 #define VELOCITY_E 125
 /*********************************************/
 #define EXTRUDER_SPEED 15
@@ -30,6 +30,9 @@
 #define ACCELERATION_Z 2
 /*********************************************/
 #define ACCELERATION_FACTOR 1
+/*********************************************/
+#define BUFFER_SIZE 40
+#define RING_BUFFER_SIZE 4
 /*********************************************/
 #define MIN_X -270
 #define MAX_X 270

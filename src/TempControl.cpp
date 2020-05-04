@@ -1,70 +1,357 @@
 #include "TempControl.h"
+#include "intervalBinarySearch.h"
 
-static uint16_t temperature_read = 0;
-static uint16_t set_temperature = TEMPERATURE;
-static int16_t PID_error = 0;
-static int16_t previous_error = 0;
-static const uint8_t elapsedTime = 1;
-static int16_t PID_value = 0;
-
-// PID constants
-static const uint8_t kp = 30;
-static const uint8_t ki = 0;
-static const uint8_t kd = 150;
+uint32_t TempControl::resistance_read = 100000;
+uint16_t TempControl::temperature_read = 0;
+uint16_t TempControl::set_temperature = TEMPERATURE;
+int16_t TempControl::PID_error = 0;
+int16_t TempControl::previous_error = 0;
+const uint8_t TempControl::elapsedTime = 1;
+int16_t TempControl::PID_value = 0;
 
 // PID values
-static int16_t PID_p = 0;
-static int16_t PID_i = 0;
-static int16_t PID_d = 0;
+int16_t TempControl::PID_p = 0;
+int16_t TempControl::PID_i = 0;
+int16_t TempControl::PID_d = 0;
 
 // Flag active if there the adc has finished the conversion
-volatile static uint8_t Flag_ADC = 0;
+volatile uint8_t TempControl::Flag_ADC = 0;
 // Flag active if there the adc has finished the conversion
-volatile static uint16_t timer2_counter = 0;
+volatile uint16_t TempControl::timer2_counter = 0;
 
-void regulateTemp() {
-  //PORTB ^= _BV(PIN_X_STEP);
+const uint32_t PROGMEM TempControl::temperature_array[291][2] = {
+    {199990, 10},
+    {190557, 11},
+    {181631, 12},
+    {173182, 13},
+    {165180, 14},
+    {157600, 15},
+    {150425, 16},
+    {143623, 17},
+    {137172, 18},
+    {131052, 19},
+    {125245, 20},
+    {119658, 21},
+    {114355, 22},
+    {109322, 23},
+    {104541, 24},
+    {100000, 25},
+    {95819, 26},
+    {91839, 27},
+    {88049, 28},
+    {84439, 29},
+    {81000, 30},
+    {77623, 31},
+    {74409, 32},
+    {71347, 33},
+    {68430, 34},
+    {65650, 35},
+    {62983, 36},
+    {60442, 37},
+    {58018, 38},
+    {55706, 39},
+    {53500, 40},
+    {51370, 41},
+    {49339, 42},
+    {47399, 43},
+    {45548, 44},
+    {43780, 45},
+    {42055, 46},
+    {40409, 47},
+    {38836, 48},
+    {37335, 49},
+    {35899, 50},
+    {34616, 51},
+    {33385, 52},
+    {32205, 53},
+    {31074, 54},
+    {29990, 55},
+    {28905, 56},
+    {27866, 57},
+    {26870, 58},
+    {25915, 59},
+    {25000, 60},
+    {24109, 61},
+    {23256, 62},
+    {22438, 63},
+    {21653, 64},
+    {20900, 65},
+    {20174, 66},
+    {19477, 67},
+    {18808, 68},
+    {18166, 69},
+    {17550, 70},
+    {16945, 71},
+    {16365, 72},
+    {15808, 73},
+    {15273, 74},
+    {14760, 75},
+    {14281, 76},
+    {13820, 77},
+    {13377, 78},
+    {12950, 79},
+    {12540, 80},
+    {12134, 81},
+    {11744, 82},
+    {11369, 83},
+    {11008, 84},
+    {10660, 85},
+    {10324, 86},
+    {10001, 87},
+    {9689, 88},
+    {9389, 89},
+    {9100, 90},
+    {8817, 91},
+    {8544, 92},
+    {8281, 93},
+    {8028, 94},
+    {7784, 95},
+    {7553, 96},
+    {7331, 97},
+    {7117, 98},
+    {6910, 99},
+    {6710, 100},
+    {6526, 101},
+    {6349, 102},
+    {6177, 103},
+    {6010, 104},
+    {5850, 105},
+    {5683, 106},
+    {5522, 107},
+    {5366, 108},
+    {5215, 109},
+    {5070, 110},
+    {4929, 111},
+    {4792, 112},
+    {4661, 113},
+    {4533, 114},
+    {4410, 115},
+    {4290, 116},
+    {4175, 117},
+    {4063, 118},
+    {3954, 119},
+    {3850, 120},
+    {3741, 121},
+    {3635, 122},
+    {3533, 123},
+    {3435, 124},
+    {3340, 125},
+    {3255, 126},
+    {3172, 127},
+    {3092, 128},
+    {3015, 129},
+    {2940, 130},
+    {2863, 131},
+    {2789, 132},
+    {2717, 133},
+    {2647, 134},
+    {2580, 135},
+    {2514, 136},
+    {2450, 137},
+    {2389, 138},
+    {2329, 139},
+    {2271, 140},
+    {2213, 141},
+    {2157, 142},
+    {2207, 143},
+    {2051, 144},
+    {2000, 145},
+    {1951, 146},
+    {1904, 147},
+    {1858, 148},
+    {1813, 149},
+    {1770, 150},
+    {1731, 151},
+    {1694, 152},
+    {1658, 153},
+    {1623, 154},
+    {1589, 155},
+    {1552, 156},
+    {1516, 157},
+    {1481, 158},
+    {1447, 159},
+    {1414, 160},
+    {1381, 161},
+    {1349, 162},
+    {1318, 163},
+    {1288, 164},
+    {1259, 165},
+    {1230, 166},
+    {1201, 167},
+    {1174, 168},
+    {1147, 169},
+    {1122, 170},
+    {1095, 171},
+    {1069, 172},
+    {1044, 173},
+    {1020, 174},
+    {997, 175},
+    {975, 176},
+    {955, 177},
+    {934, 178},
+    {915, 179},
+    {896, 180},
+    {875, 181},
+    {854, 182},
+    {834, 183},
+    {815, 184},
+    {797, 185},
+    {780, 186},
+    {764, 187},
+    {749, 188},
+    {733, 189},
+    {719, 190},
+    {702, 191},
+    {687, 192},
+    {672, 193},
+    {657, 194},
+    {643, 195},
+    {630, 196},
+    {617, 197},
+    {605, 198},
+    {593, 199},
+    {582, 200},
+    {571, 201},
+    {561, 202},
+    {551, 203},
+    {542, 204},
+    {533, 205},
+    {522, 206},
+    {512, 207},
+    {502, 208},
+    {492, 209},
+    {483, 210},
+    {473, 211},
+    {463, 212},
+    {454, 213},
+    {445, 214},
+    {437, 215},
+    {428, 216},
+    {420, 217},
+    {411, 218},
+    {403, 219},
+    {396, 220},
+    {388, 221},
+    {381, 222},
+    {373, 223},
+    {366, 224},
+    {360, 225},
+    {353, 226},
+    {346, 227},
+    {340, 228},
+    {334, 229},
+    {328, 230},
+    {322, 231},
+    {316, 232},
+    {310, 233},
+    {304, 234},
+    {299, 235},
+    {294, 236},
+    {288, 237},
+    {283, 238},
+    {278, 239},
+    {273, 240},
+    {268, 241},
+    {264, 242},
+    {259, 243},
+    {255, 244},
+    {250, 245},
+    {246, 246},
+    {242, 247},
+    {238, 248},
+    {234, 249},
+    {230, 250},
+    {226, 251},
+    {222, 252},
+    {218, 253},
+    {215, 254},
+    {211, 255},
+    {207, 256},
+    {204, 257},
+    {201, 258},
+    {197, 259},
+    {194, 260},
+    {191, 261},
+    {188, 262},
+    {185, 263},
+    {182, 264},
+    {179, 265},
+    {176, 266},
+    {173, 267},
+    {171, 268},
+    {168, 269},
+    {165, 270},
+    {163, 271},
+    {160, 272},
+    {157, 273},
+    {155, 274},
+    {153, 275},
+    {150, 276},
+    {148, 277},
+    {146, 278},
+    {143, 279},
+    {141, 280},
+    {139, 281},
+    {137, 282},
+    {135, 283},
+    {133, 284},
+    {131, 285},
+    {129, 286},
+    {127, 287},
+    {125, 288},
+    {123, 289},
+    {122, 290},
+    {120, 291},
+    {118, 292},
+    {116, 293},
+    {115, 294},
+    {113, 295},
+    {111, 296},
+    {110, 297},
+    {108, 298},
+    {107, 299},
+    {105, 300}};
+
+
+
+void  TempControl::regulateTemp()
+{
+
   temperature_read = ADC;
-  sendData("$T");
-  sendData(&temperature_read);
-  jumpLine();
   PID_error = set_temperature - temperature_read;
-  PID_p = PID_error * kp;
-  PID_d = ((PID_error - previous_error) / elapsedTime) * kd;
+  PID_p = PID_error * KP;
+  PID_d = ((PID_error - previous_error) / elapsedTime) * KD;
   PID_value = PID_p + PID_i + PID_d;
 
-  if (PID_value < 0) {
+  if (PID_value < 0)
+  {
     PID_value = 0;
-  } else if (PID_value > 255) {
+  }
+  else if (PID_value > 255)
+  {
     PID_value = 255;
   }
 
   OCR4A = 255 - PID_value;
   previous_error = PID_error;
-  resetFlagADC();
-   //PORTB ^= _BV(PIN_X_STEP);
+ // resetFlagADC();
+
 }
 
-void setTempControl() {
+void TempControl::voltageToResistance()
+{
+  float resistor_voltage = temperature_read * 0.0048828125f;
+  resistance_read = round((resistor_voltage * 1000) / (5 - resistor_voltage));
+}
+
+void TempControl::setTempControl()
+{
   setTimer2();
   setTimer4();
   setADC();
 }
 
-void setTemperature(uint16_t temperature){
-set_temperature = temperature;
+void TempControl::setTemperature(const uint16_t &temperature)
+{
+  set_temperature = temperature;
 }
-
-void  timer2ISR() {
-  timer2_counter++;
-  if (timer2_counter == CYCLES_TO_ONE_SECOND) {
-    ADCSRA |= _BV(ADSC);
-    timer2_counter = 0;
-  }
-}
-
-void  setFlagADC() { Flag_ADC = true; }
-
-void  resetFlagADC() { Flag_ADC = false; }
-
-uint8_t readFlagADC() { return Flag_ADC; }

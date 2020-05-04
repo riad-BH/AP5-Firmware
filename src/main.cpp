@@ -5,22 +5,27 @@
 #include "Arduino.h"
 #include "Config.h"
 #include "Scheduler.h"
+#include "IOFunctions.h"
 
 /*================================================================
     MAIN PROGRAM
  =================================================================*/
 
-int main() {
+int main()
+{
 
-  cli();
+  ENTER_LV1_CRITICAL_SECTION;
   setIO();
   setUSART0(USART_BAUD_RATE);
   sendStartingScreen();
-  setTempControl();
-  sei();
+  TempControl::setTempControl();
+  lcd.configure();
 
-  while (1) {
-    schedule();
+ EXIT_LV1_CRITICAL_SECTION;
+
+  while (1)
+  {
+    Scheduler::schedule();
   }
 
   return 0;

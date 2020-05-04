@@ -1,56 +1,16 @@
 #include "Processing.h"
 
 /************************************************/
-// Impulsion size at the start in microseconds
-uint16_t impStart = IMP_START;
-// Impulsion size in microseconds
-uint16_t impValue = IMP_VALUE;
-// Implusion size at the end in microseconds
-uint16_t impFinish = 180;
-// Controlable impulsion size in microseconds
-uint16_t impControlableValue = IMP_VALUE;
-// Impulsion size at the start in microseconds for Z axis
-uint16_t jerk_z = JERK_Z;
-// Impulsion size in microseconds for Z axis
-uint16_t velocity_z = VELOCITY_Z;
-/************************************************/
-// Extruder speed
-uint8_t extruderSpeed = EXTRUDER_SPEED;
-// Flag Extruder if there is extrusion or not
-uint8_t FLAG_extruder = 0;
-// Flag set on if there is an extrusion
-uint8_t FLAG_extrusion_for_timer = 0;
-/************************************************/
 // Flag is set to 1 if bluetooth is activated
 uint8_t FLAG_bluetoothState = 0;
 /************************************************/
 // Flag is set to 1 if limit switch is activated
 uint8_t FLAG_limitSwitchState = 0;
 /************************************************/
-// Flag is set to 1 if it's a G1 command
-// Or if it's G0 command it is set to 0
-uint8_t FLAG_G0_or_G1 = 0;
-/************************************************/
-// Extruding value
-int32_t de = 0;
-/************************************************/
-
-/*************** Local Variables ***************/
-// X axis limits
-static int16_t minX = MIN_X;
-static int16_t maxX = MAX_X;
-// Y axis limits
-static int16_t minY = MIN_Y;
-static int16_t maxY = MAX_Y;
-// Z axis limits
-static int16_t minZ = MIN_Z;
-static int16_t maxZ = MAX_Z;
-/************************************************/
 // Manual control step
 static uint8_t mcs = MANUAL_CONTROL_STEP;
 /************************************************/
-static uint8_t FLAG_fanState = 0;
-/************************************************/
+
 #ifndef _ABSOLUTE_POSITIONS
 // X new position
 static float newX = 0.0;
@@ -67,54 +27,58 @@ static float oldZ = 0.0;
 #endif
 /************************************************/
 
-/*************** Extern Variables ***************/
-extern uint8_t acceleration;
 /************************************************/
-extern uint16_t spmX;
-extern uint16_t spmY;
-extern uint16_t spmZ;
-/************************************************/
-
-/************************************************/
-volatile extern uint8_t FLAG_motorsActivated;
-// Flag is set to 1 if Z motor is activated
-volatile extern uint8_t FLAG_motor_Z_acivated;
+// X axis steps per milimeter
+uint16_t spmX = STEP_PER_MILLIMETER_X;
+// Y axis steps per milimeter
+uint16_t spmY = STEP_PER_MILLIMETER_Y;
+// Z axis steps per milimeter
+uint16_t spmZ = STEP_PER_MILLIMETER_Z;
 /************************************************/
 
-/************************************************/
-// Flag is set to one if automatic bed leveling is activated
-extern uint8_t FLAG_automaticBedLeveling;
+extern Motors steppers;
 /************************************************/
 
-/************************************************/
+#define mq_head mq.mouvements_array[mq.head]
 
-uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
-                    int32_t *dY, int32_t *dZ) {
+uint8_t fProcessing(const char *dataLine, char _localBuffer[8], MouvementQueue &mq)
+{
+
   // Index for the processing function
   uint8_t actualIndex = 0;
+  mq.flushMouvemetBuffer();
 
-  switch (dataLine[actualIndex++]) {
+  switch (dataLine[actualIndex++])
+  {
 
-  case 'G': {
+  case 'G':
+  {
     // Store the second chacarcter then increment the actual index
     _localBuffer[0] = dataLine[actualIndex++];
     // Close the array
     _localBuffer[1] = '\0';
 
     // Transform the second character from Ascii to an int then read it
-    switch (atoi(_localBuffer)) {
+    switch (atoi(_localBuffer))
+    {
 
     // G0 function
-    case 0: {
-      FLAG_G0_or_G1 = 0;
-      uint8_t indexChar = 0;
+    case 0:
+    {
+      mq.setDe_state(0);
+
+      uint8_t indexChar = 2;
+
       // Search the character X begining from the second character
-      while (dataLine[indexChar] != '\0') {
-        switch (dataLine[indexChar]) {
+      while (dataLine[indexChar] != '\0')
+      {
+        switch (dataLine[indexChar])
+        {
 
         // Case X
-        case 'X': {
-          char *indexX = &dataLine[indexChar];
+        case 'X':
+        {
+          const char *indexX = &dataLine[indexChar];
 #ifdef _STEP_PER_MILIMETER_CALCULATION
 #ifdef _ABSOLUTE_POSITIONS
           *dX = round(atof(indexX + 1) * spmX);
@@ -124,14 +88,15 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
           oldX = newX;
 #endif
 #else
-          *dX = atol(indexX + 1);
+          mq.setDx(atol(indexX + 1));
 #endif
           break;
         }
 
         // Case Y
-        case 'Y': {
-          char *indexY = &dataLine[indexChar];
+        case 'Y':
+        {
+          const char *indexY = &dataLine[indexChar];
 #ifdef _STEP_PER_MILIMETER_CALCULATION
 #ifdef _ABSOLUTE_POSITIONS
           *dY = round(atof(indexY + 1) * spmY);
@@ -141,14 +106,15 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
           oldY = newY;
 #endif
 #else
-          *dY = atol(indexY + 1);
+          mq.setDy(atol(indexY + 1));
 #endif
           break;
         }
 
         // Case Z
-        case 'Z': {
-          char *indexZ = &dataLine[indexChar];
+        case 'Z':
+        {
+          const char *indexZ = &dataLine[indexChar];
 #ifdef _STEP_PER_MILIMETER_CALCULATION
 #ifdef _ABSOLUTE_POSITIONS
           *dZ = round(atof(indexZ + 1) * spmZ);
@@ -158,22 +124,24 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
           oldZ = newZ;
 #endif
 #else
-          *dZ = atol(indexZ + 1);
+          mq.setDz(atol(indexZ + 1));
 #endif
           break;
         }
 
         // Printer speed
-        case 'F': {
-          char *indexF = &dataLine[indexChar];
-          impControlableValue = atoi(indexF + 1);
+        case 'F':
+        {
+          const char *indexF = &dataLine[indexChar];
+          mq.setImp_value(atoi(indexF + 1));
           break;
         }
 
         // Impulsion finish
-        case 'J': {
-          char *indexJ = strchr(dataLine, 'J');
-          impFinish = atoi(indexJ + 1);
+        case 'J':
+        {
+          const char *indexJ = strchr(dataLine, 'J');
+          mq.setAngle(atoi(indexJ + 1));
           break;
         }
 
@@ -183,25 +151,28 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
         indexChar++;
       }
 
-      FLAG_extruder = false;
       return 0;
       break;
     } // END CASE G0
 
     // G1 function
-    case 1: {
-      FLAG_G0_or_G1 = 1;
+    case 1:
+    {
+
+      mq.setDe_state(1);
+
       // Search the character X begining from the second character
       uint8_t indexChar = 2;
 
-      // Reset extruder's flag
-      FLAG_extruder = false;
-      while (dataLine[indexChar] != '\0') {
-        switch (dataLine[indexChar]) {
+      while (dataLine[indexChar] != '\0')
+      {
+        switch (dataLine[indexChar])
+        {
 
         // Case X
-        case 'X': {
-          char *indexX = &dataLine[indexChar];
+        case 'X':
+        {
+          const char *indexX = &dataLine[indexChar];
 #ifdef _STEP_PER_MILIMETER_CALCULATION
 #ifdef _ABSOLUTE_POSITIONS
           *dX = round(atof(indexX + 1) * spmX);
@@ -211,14 +182,15 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
           oldX = newX;
 #endif
 #else
-          *dX = atol(indexX + 1);
+          mq.setDx(atol(indexX + 1));
 #endif
           break;
         }
 
         // Case Y
-        case 'Y': {
-          char *indexY = &dataLine[indexChar];
+        case 'Y':
+        {
+          const char *indexY = &dataLine[indexChar];
 #ifdef _STEP_PER_MILIMETER_CALCULATION
 #ifdef _ABSOLUTE_POSITIONS
           *dY = round(atof(indexY + 1) * spmY);
@@ -228,14 +200,15 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
           oldY = newY;
 #endif
 #else
-          *dY = atol(indexY + 1);
+          mq.setDy(atol(indexY + 1));
 #endif
           break;
         }
 
         // Case Z
-        case 'Z': {
-          char *indexZ = &dataLine[indexChar];
+        case 'Z':
+        {
+          const char *indexZ = &dataLine[indexChar];
 #ifdef _STEP_PER_MILIMETER_CALCULATION
 #ifdef _ABSOLUTE_POSITIONS
           *dZ = round(atof(indexZ + 1) * spmZ);
@@ -245,14 +218,15 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
           oldZ = newZ;
 #endif
 #else
-          *dZ = atol(indexZ + 1);
+          mq.setDz(atol(indexZ + 1));
 #endif
           break;
         }
 
         // Case E
-        case 'E': {
-          FLAG_extruder = true;
+        case 'E':
+        {
+
 #ifdef _GET_EXTRUDER_SPEED
           char *indexE = &dataLine[indexChar];
           extruderSpeed = atoi(indexE + 1);
@@ -261,34 +235,27 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
           jumpLine();
 #endif
 #endif
+
+          const char *indexE = &dataLine[indexChar];
+          mq.setDe(atol(indexE + 1) * EXTRUDER_GEAR_COEFFICIENT);
+          //mq.setDe(atol(indexE + 1));
           break;
         }
 
-        case 'F': {
-          char *indexF = &dataLine[indexChar];
-          impControlableValue = atoi(indexF + 1);
+        case 'F':
+        {
+          const char *indexF = &dataLine[indexChar];
+          mq.setImp_value(atoi(indexF + 1));
           break;
         }
 
         // Impulsion finish
-        case 'J': {
+        case 'J':
+        {
           char *indexJ = strchr(dataLine, 'J');
-          impFinish = atoi(indexJ + 1);
+          mq.setAngle(atoi(indexJ + 1));
           break;
         }
-
-        /*// Retract
-        case 'R': {
-          de = 1800;
-          FLAG_extrusion_for_timer = 1;
-          break;
-        }
-        // Rextrude
-        case 'H': {
-          de = 1800;
-          FLAG_extrusion_for_timer = 2;
-          break;
-        }*/
 
         default:
           break;
@@ -302,8 +269,9 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
     } // END CASE G1
 
     // DEFAULT G case
-    default: {
-      sendData("G ERROR");
+    default:
+    {
+      sendLine("G ERROR");
       jumpLine();
       return 1;
       break;
@@ -312,41 +280,49 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
     break;
   } // END G COMMAND
 
-  case '$': {
-    switch (dataLine[actualIndex++]) {
+  case '$':
+  {
+    switch (dataLine[actualIndex++])
+    {
 
     // Manual control's step
-    case 'M': {
+    case 'M':
+    {
       char *indexC = strchr(dataLine, 'C');
       mcs = atoi(indexC + 1);
-      sendData("Manual control's step:  ");
-      sendData(&mcs);
+      sendLine("Manual control's step:  ");
+      sendData(mcs);
       jumpLine();
       return 1;
       break;
     }
 
     // Temperature control
-    case 'T': {
+    case 'T':
+    {
       char *indexT = strchr(dataLine, 'T');
       uint16_t voltage = atoi(indexT + 1);
-      setTemperature(voltage);
-      sendData("Voltage temperature is set now to: ");
-      sendData(&voltage);
+      TempControl::setTemperature(voltage);
+      sendLine("Voltage temperature is set now to: ");
+      sendData(voltage);
       jumpLine();
       return 1;
       break;
     }
 
     // Bluetooth
-    case 'B': {
+    case 'B':
+    {
       FLAG_bluetoothState = !FLAG_bluetoothState;
-      sendData("Bluetooth is:  ");
-      sendData(&FLAG_bluetoothState);
+      sendLine("Bluetooth is:  ");
+      sendData(FLAG_bluetoothState);
       jumpLine();
-      if (FLAG_bluetoothState) {
+      if (FLAG_bluetoothState)
+      {
         setUSART1(BLUETOOTH_BAUD_RATE);
-      } else {
+      }
+      else
+      {
         unsetUSART1();
       }
       return 1;
@@ -354,17 +330,21 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
     }
 
     // Limit switch
-    case 'L': {
+    case 'L':
+    {
       FLAG_limitSwitchState = !FLAG_limitSwitchState;
-      sendData("Limit switch is:  ");
-      sendData(&FLAG_limitSwitchState);
+      sendLine("Limit switch is:  ");
+      sendData(FLAG_limitSwitchState);
       jumpLine();
-      if (FLAG_limitSwitchState) {
+      if (FLAG_limitSwitchState)
+      {
         setInt(0);
         setInt(1);
         setInt(4);
         setInt(5);
-      } else {
+      }
+      else
+      {
         unsetInt(0);
         unsetInt(1);
         unsetInt(4);
@@ -375,185 +355,158 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
     }
 
     // Manual control
-    case '+': {
-      if (dataLine[actualIndex] == 'X') {
-        *dX = mcs * spmX;
-        *dY = 0;
-        *dZ = 0;
-      } else if (dataLine[actualIndex] == 'Y') {
-        *dX = 0;
-        *dY = mcs * spmY;
-        *dZ = 0;
-      } else if (dataLine[actualIndex] == 'Z') {
-        *dX = 0;
-        *dY = 0;
-        *dZ = mcs * spmZ;
+    case '+':
+    {
+      if (dataLine[actualIndex] == 'X')
+      {
+        mq.setDx(mcs * spmX);
+        mq.setDy(0);
+        mq.setDz(0);
       }
-      impFinish = 180;
-      FLAG_G0_or_G1 = 0;
-      impValue = IMP_VALUE_G0;
+      else if (dataLine[actualIndex] == 'Y')
+      {
+        mq.setDx(0);
+        mq.setDy(mcs * spmY);
+        mq.setDz(0);
+      }
+      else if (dataLine[actualIndex] == 'Z')
+      {
+        mq.setDx(0);
+        mq.setDy(0);
+        mq.setDz(mcs * spmZ);
+      }
+
+      mq.setAngle(180);
+      mq.setImp_value(IMP_VALUE_G0);
       return 0;
       break;
     }
 
     // Manual control
-    case '-': {
-      if (dataLine[actualIndex] == 'X') {
-        *dX = -(int32_t)(mcs * spmX);
-        *dY = 0;
-        *dZ = 0;
-      } else if (dataLine[actualIndex] == 'Y') {
-        *dX = 0;
-        *dY = -(int32_t)(mcs * spmY);
-        *dZ = 0;
-
-      } else if (dataLine[actualIndex] == 'Z') {
-        *dX = 0;
-        *dY = 0;
-        *dZ = -(int16_t)(mcs * spmZ);
+    case '-':
+    {
+      if (dataLine[actualIndex] == 'X')
+      {
+        mq.setDx(-(int32_t)(mcs * spmX));
+        mq.setDy(0);
+        mq.setDz(0);
       }
-      impFinish = 180;
-      FLAG_G0_or_G1 = 0;
-      impValue = IMP_VALUE_G0;
+      else if (dataLine[actualIndex] == 'Y')
+      {
+        mq.setDx(0);
+        mq.setDy(-(int32_t)(mcs * spmY));
+        mq.setDz(0);
+      }
+      else if (dataLine[actualIndex] == 'Z')
+      {
+        mq.setDx(0);
+        mq.setDy(0);
+        mq.setDz(-(int32_t)(mcs * spmZ));
+      }
+      mq.setAngle(180);
+      mq.setImp_value(IMP_VALUE_G0);
       return 0;
       break;
     }
 
     // Jerk impulsion
-    case 'J': {
+    case 'J':
+    {
       char *indexJ = strchr(dataLine, 'J');
-      impStart = atoi(indexJ + 1);
-      sendData("Starting impulsion's size:  ");
-      sendData(&impStart);
-      jumpLine();
+      mq.setAngle(atoi(indexJ + 1));
+      sendLine("Next angle set to: something");
       return 1;
       break;
     }
 
     // Working impulsion
-    case 'I': {
+    case 'I':
+    {
       char *indexI = strchr(dataLine, 'I');
-      impControlableValue = atoi(indexI + 1);
-      sendData("Working impulsion's size:  ");
-      sendData(&impControlableValue);
-      jumpLine();
+      mq.setImp_value(atoi(indexI + 1));
+      sendLine("Working impulsion's size: something");
       return 1;
       break;
     }
 
     // Extruder speed
-    case 'E': {
+    case 'E':
+    {
       char *indexE = strchr(dataLine, 'E');
-      extruderSpeed = atoi(indexE + 1);
-      sendData("Extrusion speed:  ");
-      sendData(&extruderSpeed);
-      jumpLine();
-      return 1;
-      break;
-    }
-
-    // Extrude
-    case 'e': {
-      char *index_e = strchr(dataLine, 'e');
-#ifdef _ABSOLUTE_EXTRUSION
-      de = atol(index_e + 1);
-#else
-      de = atol(index_e + 1) * EXTRUDER_GEAR_COEFFICIENT;
-#endif
-      if (de >= 0) {
-        PORTA &= ~(_BV(PIN_E_DIR));
-      } else {
-        PORTA |= (_BV(PIN_E_DIR));
-        de = -(de);
-      }
-      while (FLAG_motorsActivated || FLAG_motor_Z_acivated) {
-        if (readFlagADC()) {
-          regulateTemp();
-        }
-      }
-      FLAG_motorsActivated = 1;
-      FLAG_extrusion_for_timer = 1;
-      fSettingUpE();
-#ifdef _PROTEUS
-      sendData(">\r");
-#else
-      sendData(">\n");
-#endif
+      mq.setExtruderSpeed(atoi(indexE + 1));
+      sendLine("Extrusion speed: something");
       return 1;
       break;
     }
 
     // Acceleration
-    case 'A': {
+    case 'A':
+    {
       char *indexA = strchr(dataLine, 'A');
-      acceleration = atoi(indexA + 1);
-      sendData("Acceleration:  ");
-      sendData(&acceleration);
+      mq.setAcceleration(atoi(indexA + 1));
+      sendLine("Acceleration:  ");
+      sendData(mq.getAcceleration(mq.head));
       jumpLine();
       return 1;
       break;
     }
 
     // Fan
-    case 'f': {
-      FLAG_fanState = !FLAG_fanState;
-      sendData("Fan is : ");
-      if (FLAG_fanState) {
-        sendData("ON");
-      } else {
-        sendData("OFF");
-      }
-      jumpLine();
-      return 1;
-      break;
+    case 'f':
+    {
     }
 
     // X Step per milimeter
-    case 'X': {
+    case 'X':
+    {
       char *indexS = strchr(dataLine, 'X');
       spmX = atoi(indexS + 1);
-      sendData("X Step per milimeter:  ");
-      sendData(&spmX);
+      sendLine("X Step per milimeter:  ");
+      sendData(spmX);
       jumpLine();
       return 1;
       break;
     }
 
     // Y Step per milimeter
-    case 'Y': {
+    case 'Y':
+    {
       char *indexS = strchr(dataLine, 'Y');
       spmY = atoi(indexS + 1);
-      sendData("Y Step per milimeter:  ");
-      sendData(&spmY);
+      sendLine("Y Step per milimeter:  ");
+      sendData(spmY);
       jumpLine();
       return 1;
       break;
     }
 
     // Z Step per milimeter
-    case 'Z': {
+    case 'Z':
+    {
       char *indexS = strchr(dataLine, 'Z');
       spmZ = atoi(indexS + 1);
-      sendData("Z Step per milimeter:  ");
-      sendData(&spmZ);
+      sendLine("Z Step per milimeter:  ");
+      sendData(spmZ);
       jumpLine();
       return 1;
       break;
     }
 
     // Bed leveling
-    case 'b': {
-      *dX = 0;
-      *dY = 0;
-      *dZ = -40000;
-      FLAG_automaticBedLeveling = 1;
+    case 'b':
+    {
+      mq.setDx(0);
+      mq.setDy(0);
+      mq.setDz(-40000);
+      Flags::setFlag_automatic_bed_leveling(1);
       return 0;
       break;
     }
 
 #ifndef _ABSOLUTE_POSITIONS
     // Reset Origin
-    case 'O': {
+    case 'O':
+    {
       oldX = 0.0;
       oldY = 0.0;
       oldZ = 0.0;
@@ -564,8 +517,9 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
     }
 #endif
 
-    default: {
-      sendData("$ Error");
+    default:
+    {
+      sendLine("$ Error");
       jumpLine();
       return 1;
       break;
@@ -575,9 +529,10 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
   } // END $ COMMAND
 
   // DEFAULT COMMAND
-  default: {
-    sendData("Unknown command:  ");
-    sendData(dataLine);
+  default:
+  {
+    sendLine("Unknown command:  ");
+    sendLine(dataLine);
     return 1;
     break;
   }
@@ -586,26 +541,4 @@ uint8_t fProcessing(char *dataLine, char _localBuffer[8], int32_t *dX,
 
   return 1;
 } // END FUNCTION
-/************************************************/
-
-void fSetLimits(float *x1, float *y1, float *z1) {
-  // Resizing the points to fit the limits
-  if (*x1 >= maxX) {
-    *x1 = maxX;
-  } else if (*x1 <= minX) {
-    *x1 = minX;
-  }
-
-  if (*y1 >= maxY) {
-    *y1 = maxY;
-  } else if (*y1 <= minY) {
-    *y1 = minY;
-  }
-
-  if (*z1 >= maxZ) {
-    *z1 = maxZ;
-  } else if (*z1 <= minZ) {
-    *z1 = minZ;
-  }
-}
 /************************************************/

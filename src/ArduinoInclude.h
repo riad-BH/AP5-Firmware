@@ -1,4 +1,4 @@
-#if !defined (H_ARDUINO_INCLUDE)
+#if !defined(H_ARDUINO_INCLUDE)
 #define H_ARDUINO_INCLUDE
 #include <Arduino.h>
 

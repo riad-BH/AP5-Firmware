@@ -7,5 +7,4 @@ void setInt(uint8_t);
 //  Desactivating interrupt
 void unsetInt(uint8_t);
 
-
 #endif // H_EXTERNAL_INTERRUPTS
